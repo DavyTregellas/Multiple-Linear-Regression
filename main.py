@@ -23,7 +23,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Get the dataset
-dataset = pd.read_csv(r'./data/BloodPressure.csv', sep='\t') # Use tab delimiter since the dataset is separated by tabs
+dataset = pd.read_csv(r'./data/HousePrices20.csv', sep='\t') # Use tab delimiter since the dataset is separated by tabs
+
+original_sqft = dataset['SqFt'].values
+original_bed = dataset['Bedrooms'].values
+original_price = dataset['Price'].values
+
+# Store mean and std for inverse scaling
+sqft_mean = original_sqft.mean()
+sqft_std = original_sqft.std()
+
+bed_mean = original_bed.mean()
+bed_std = original_bed.std()
+
+price_mean = original_price.mean()
+price_std = original_price.std()
 
 # Check if the dataset loaded correctly by printing first few rows
 # print(dataset.head())
@@ -31,10 +45,10 @@ dataset = pd.read_csv(r'./data/BloodPressure.csv', sep='\t') # Use tab delimiter
 # Separating the independent and dependent features
 
 # Dependent variable (target)
-y = np.asarray(dataset['Blood Pressure'].values.tolist()) # Extracting the 'Blood Pressure' column saving to y 
+y = np.asarray(dataset['Price'].values.tolist()) # Extracting the 'Blood Pressure' column saving to y 
 
 # Independent variables (features)
-X = dataset.drop(["Blood Pressure"], axis=1) # Extracts all other columns except 'Blood Pressure' column
+X = dataset.drop(["Price"], axis=1) # Extracts all other columns except 'Blood Pressure' column
 
 # Check to ensure correct indpendant values are kept
 # print(X.head())
@@ -48,6 +62,10 @@ X = dataset.drop(["Blood Pressure"], axis=1) # Extracts all other columns except
 
 # Print the entire y (dependent variable)
 # print(y)
+
+# Now create the feature matrix and target vector
+X = dataset[['SqFt', 'Bedrooms']].values
+y = dataset['Price'].values
 
 # .reshape converts the depentant varible from a row list to a colmn
 y = y.reshape(len(y), 1)
@@ -224,57 +242,57 @@ print("Test Losses:", test_loss)
 # Plot the Train Loss
 regressor.plotLoss(train_loss, range(1, 201))  # Use range for epochs to plot correctly
 
-# Rescale the data to the original ranges for plotting
-age_min, age_max = 45, 75  # Min and Max for Age
-weight_min, weight_max = 170, 220  # Min and Max for Weight
-bp_min, bp_max = 130, 170  # Min and Max for Blood Pressure
+# Define real min and max values for each feature from the dataset
+sqft_min, sqft_max = 1590, 2590       # Square Foot range
+bed_min, bed_max = 2, 4               # Bedrooms range
+price_min, price_max = 124000, 199500  # Price range
 
-# Create a function to inverse scale the data
-def inverse_scale_age(age_scaled):
-    return age_scaled * (age_max - age_min) + age_min
+def inverse_scale_sqft(scaled):
+    return scaled * sqft_std + sqft_mean
 
-def inverse_scale_weight(weight_scaled):
-    return weight_scaled * (weight_max - weight_min) + weight_min
+def inverse_scale_bed(scaled):
+    return scaled * bed_std + bed_mean
 
-def inverse_scale_bp(bp_scaled):
-    return bp_scaled * (bp_max - bp_min) + bp_min
+def inverse_scale_price(scaled):
+    return scaled * price_std + price_mean
 
-# 3D Plotting - Using first 2 features only for visualization (in the original scale)
+
+# 3D Plotting with proper labels and scaling
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-# Plot actual training data points (age and weight should be in original scale)
-actual_age = inverse_scale_age(X_train[:, 0])
-actual_weight = inverse_scale_weight(X_train[:, 1])
-actual_bp = inverse_scale_bp(y_train.flatten())  # y_train is already the target
+# Plot actual training data
+actual_sqft = inverse_scale_sqft(X_train[:, 0])
+actual_beds = inverse_scale_bed(X_train[:, 1])
+actual_price = inverse_scale_price(y_train.flatten())
 
-ax.scatter(actual_age, actual_weight, actual_bp, color='r', label='Actual')
 
-# Predict y for training data to plot predicted points
+ax.scatter(actual_sqft, actual_beds, actual_price, color='r', label='Actual')
+
+# Predicted prices
 predicted_train_y = np.dot(X_train, W_trained)
-predicted_train_bp = inverse_scale_bp(predicted_train_y.flatten())  # Rescale back to original BP
+predicted_price = inverse_scale_price(predicted_train_y.flatten())
 
-ax.scatter(actual_age, actual_weight, predicted_train_bp, color='g', label='Predicted')
+ax.scatter(actual_sqft, actual_beds, predicted_price, color='g', label='Predicted')
 
-# Plot predicted surface
+# Plot regression surface
 x_surf, y_surf = np.meshgrid(np.linspace(X[:, 0].min(), X[:, 0].max(), 10),
-                              np.linspace(X[:, 1].min(), X[:, 1].max(), 10))
+                             np.linspace(X[:, 1].min(), X[:, 1].max(), 10))
 
-# Prepare the input for prediction and calculate the surface
 z_surf_input = np.c_[x_surf.ravel(), y_surf.ravel(), np.ones_like(x_surf.ravel())]
 z_surf = z_surf_input.dot(W_trained).reshape(x_surf.shape)
 
 # Rescale the surface to the original blood pressure range
-predicted_surf_bp = inverse_scale_bp(z_surf)
+predicted_surf_hp = inverse_scale_price(z_surf)
 
 # Plot the regression surface
-ax.plot_surface(inverse_scale_age(x_surf), inverse_scale_weight(y_surf), predicted_surf_bp, alpha=0.5, color='blue')
+ax.plot_surface(inverse_scale_sqft(x_surf), inverse_scale_bed(y_surf), predicted_surf_hp, alpha=0.5, color='blue')
 
 # Labels and title
-ax.set_xlabel('Age')
-ax.set_ylabel('Weight')
-ax.set_zlabel('Blood Pressure')
-ax.set_title('3D Plot of Linear Regression Surface')
+ax.set_xlabel('Square Foot')
+ax.set_ylabel('Bedrooms')
+ax.set_zlabel('House Price')
+ax.set_title('3D Result Graph Multiple Linear Regression')
 
 # Show the legend and plot
 ax.legend()
