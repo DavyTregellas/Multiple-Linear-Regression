@@ -23,7 +23,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Get the dataset
-dataset = pd.read_csv(r'./data/HousePrices20.csv', sep='\t') # Use tab delimiter since the dataset is separated by tabs
+dataset = pd.read_csv(r'./data/HousePrices40.csv', sep='\t') # Use tab delimiter since the dataset is separated by tabs
 
 original_sqft = dataset['SqFt'].values
 original_bed = dataset['Bedrooms'].values
@@ -298,3 +298,10 @@ ax.set_title('3D Result Graph Multiple Linear Regression')
 ax.legend()
 plt.show()
 
+# Convert test predictions back to actual house prices
+actual_prices = inverse_scale_price(y_test.flatten())
+predicted_prices = inverse_scale_price(np.array(test_pred))
+
+# Show side-by-side
+for i, (actual, predicted) in enumerate(zip(actual_prices, predicted_prices)):
+    print(f"Sample {i+1}: Actual = {actual:.2f}, Predicted = {predicted:.2f}, Error = {abs(predicted - actual):.2f}")
